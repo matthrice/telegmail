@@ -8,6 +8,7 @@ verify_ssl = true
 [packages]
 requests = "*"
 telethon = "*"
+pytz = "*"
 
 [requires]
 python_version = "3.7"
