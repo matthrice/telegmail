@@ -28,8 +28,8 @@ telegram_offset = timedelta(hours=7)
 
 # email setup
 smtp = {
-    "host": "smtp.gmail.com",
-    "port": 587,
+    "host": os.getenv("EMAIL_HOST"),
+    "port": int(os.getenv("EMAIL_PORT")),
     "tls": True,
     "ssl": False,
     "user": os.getenv("EMAIL_USER"),
@@ -38,7 +38,7 @@ smtp = {
 
 
 async def messages_by_day(channel, day):
-    # Get all messages from a channel given a day
+    """Get all messages from a channel given a day."""
 
     # make day timezone aware and offset
     begin_search_day = utc.localize(day - timedelta(days=1) + telegram_offset)
@@ -82,7 +82,7 @@ def format_email(header, snippets):
 
 
 async def main():
-    # get messages from yesterday, last week, and last month, and send an email
+    """Get messages from yesterday, last week, and last month, and send an email."""
 
     # fill cache ?
     dialogs = await client.get_dialogs()
