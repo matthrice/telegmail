@@ -27,13 +27,19 @@ utc = pytz.UTC
 telegram_offset = timedelta(hours=7)
 
 # email setup
+from_email = os.getenv("EMAIL_FROM_USER")
+to_email = os.getenv("EMAIL_TO_USER")
+email_password = os.getenv("EMAIL_PASSWORD")
+email_host = os.getenv("EMAIL_HOST")
+email_port = int(os.getenv("EMAIL_PORT"))
+
 smtp = {
-    "host": os.getenv("EMAIL_HOST"),
-    "port": int(os.getenv("EMAIL_PORT")),
+    "host": email_host,
+    "port": email_port,
     "tls": True,
     "ssl": False,
-    "user": os.getenv("EMAIL_USER"),
-    "password": os.getenv("EMAIL_PASSWORD"),
+    "user": from_email,
+    "password": email_password,
 }
 
 
@@ -108,9 +114,10 @@ async def main():
     content = format_email("Telegram Messages", [
                            yesterday_snippet, last_week_snippet, last_month_snippet])
 
+    # send email
     print("Sending email...")
-    mdmail.send(content, subject="Telegram Messages", from_email="mattrice.newsletter@gmail.com", to_email="mattrice.tx@gmail.com",
-                smtp=smtp)
+    mdmail.send(content, subject="Telegram Messages",
+                from_email=from_email, to_email=to_email, smtp=smtp)
 
 
 with client:
