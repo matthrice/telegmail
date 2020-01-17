@@ -1,5 +1,8 @@
 from datetime import datetime, date, timedelta
 import pytz
+import smtplib
+import os
+from email.message import EmailMessage
 
 utc = pytz.UTC
 
@@ -15,9 +18,30 @@ def messages_by_day(day):
     # make day timezone aware and offset
     adjusted_day = utc.localize(day)
 
-    print("BEGIN SEARCH DAY" + str(adjusted_day -
-                                   timedelta(days=1) + telegram_offset))
-    print("END SEARCH DAY" + str(adjusted_day + telegram_offset))
+    return f"""
+{"BEGIN SEARCH DAY" + str(adjusted_day -
+                                   timedelta(days=1) + telegram_offset)}
+{"END SEARCH DAY" + str(adjusted_day + telegram_offset)}
+
+{adjusted_day.strftime("%B %d, %Y (%A)")}
+"""
 
 
-messages_by_day(yesterday)
+def send_content(content):
+    try:
+        server = smtplib.SMTP('smtp.gmail.com:587')
+        server.ehlo()
+        server.starttls()
+        server.login(os.getenv("EMAIL_USER"), os.getenv("EMAIL_PASSWORD"))
+
+        message = 'Subject: Telegram Messages\n\n{}'.format("content")
+        server.sendmail(os.getenv("EMAIL_USER"),
+                        "mattrice.tx@gmail.com", message)
+        server.quit()
+        print("Success! email sent")
+    except:
+        print("Email failed to send")
+
+
+content = messages_by_day(yesterday)
+send_content(content)

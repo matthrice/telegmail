@@ -9,6 +9,8 @@ verify_ssl = true
 requests = "*"
 telethon = "*"
 pytz = "*"
+mdmail = "*"
+smtplib = "*"
 
 [requires]
 python_version = "3.7"

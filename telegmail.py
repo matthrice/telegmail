@@ -1,14 +1,17 @@
+import os
+import pytz
+import asyncio
+import mdmail
+
 from telethon import TelegramClient
 from telethon import functions, types
 from datetime import datetime, date, timedelta
-import pytz
-import asyncio
 
 # telegram app configuration
-api_id = 1178334
-api_hash = 'ced689e6f267cb44dee767bb24e2cb6d'
-notes_chanel = 'https://t.me/joinchat/AAAAAEa0c94VxbuxWgS2xw'
-client = TelegramClient('telegmail', api_id, api_hash)
+api_id = int(os.getenv("API_ID"))
+api_hash = os.getenv("API_HASH")
+notes_chanel = os.getenv("CHANNEL_URL")
+client = TelegramClient(os.getenv("APP_NAME"), api_id, api_hash)
 
 # max number of messages returned
 MAX_RESULTS = 100
@@ -16,12 +19,22 @@ MAX_RESULTS = 100
 # time constants
 today = datetime.combine(date.today(), datetime.max.time())
 yesterday = today - timedelta(days=1)
-last_week = today - timedelta(days=6)
-last_month = today - timedelta(days=29)
+last_week = today - timedelta(days=7)
+last_month = today - timedelta(days=30)
 
 # time adjustments
 utc = pytz.UTC
 telegram_offset = timedelta(hours=7)
+
+# email setup
+smtp = {
+    "host": "smtp.gmail.com",
+    "port": 587,
+    "tls": True,
+    "ssl": False,
+    "user": os.getenv("EMAIL_USER"),
+    "password": os.getenv("EMAIL_PASSWORD"),
+}
 
 
 async def messages_by_day(channel, day):
@@ -31,9 +44,6 @@ async def messages_by_day(channel, day):
     begin_search_day = utc.localize(day - timedelta(days=1) + telegram_offset)
     end_search_day = utc.localize(day + telegram_offset)
 
-    print("BEGIN SEARCH DAY" + str(begin_search_day))
-    print("END SEARCH DAY" + str(end_search_day))
-
     result = []
     async for msg in client.iter_messages(channel, offset_date=begin_search_day, reverse=True):
         if msg.date > end_search_day:
@@ -41,19 +51,67 @@ async def messages_by_day(channel, day):
         result.append(msg)
 
 
+def format_msg_group(header, date, msgs):
+    """Format a message group into markdown."""
+
+    # format date
+    date_str = date.strftime("%B %d, %Y (%A)")
+
+    # format messages and join
+    msg_str = "\n".join([msg.text.replace("#", "\#") + "\n" for msg in msgs])
+
+    return f"""
+### {header}
+
+#### {date_str}
+
+{msg_str}
+"""
+
+
+def format_email(header, snippets):
+    """Format entire email from markdown snippets"""
+
+    snippet_str = "\n".join(snippets)
+
+    return f"""
+# {header}
+
+{snippet_str}
+"""
+
+
 async def main():
+    # get messages from yesterday, last week, and last month, and send an email
+
     # fill cache ?
     dialogs = await client.get_dialogs()
     # get "Notes" channel
     notes_channel = await client.get_entity(notes_chanel)
 
-    msgs_yesterday = await messages_by_day(notes_channel, yesterday - timedelta(days=2))
-    print([x.text for x in msgs_yesterday])
-    # msgs_yesterday, msgs_last_week, msgs_last_month = await asyncio.gather(
-    #     messages_by_day(notes_channel, yesterday),
-    #     messages_by_day(notes_channel, last_week),
-    #     messages_by_day(notes_channel, last_month)
-    # )
+    # get messages
+    msgs_yesterday, msgs_last_week, msgs_last_month = await asyncio.gather(
+        messages_by_day(notes_channel, yesterday),
+        messages_by_day(notes_channel, last_week),
+        messages_by_day(notes_channel, last_month)
+    )
+
+    # format individual markdown snippets
+    yesterday_snippet = format_msg_group(
+        "Yesterday", yesterday, msgs_yesterday)
+    last_week_snippet = format_msg_group(
+        "Last Week", last_week, msgs_last_week)
+    last_month_snippet = format_msg_group(
+        "Last Month", last_month, msgs_last_month)
+
+    # format full markdown
+    content = format_email("Telegram Messages", [
+                           yesterday_snippet, last_week_snippet, last_month_snippet])
+
+    print("Sending email...")
+    mdmail.send(content, subject="Telegram Messages", from_email="mattrice.newsletter@gmail.com", to_email="mattrice.tx@gmail.com",
+                smtp=smtp)
+
 
 with client:
     client.loop.run_until_complete(main())
