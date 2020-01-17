@@ -10,6 +10,7 @@ requests = "*"
 telethon = "*"
 pytz = "*"
 mdmail = "*"
+re = "*"
 
 [requires]
 python_version = "3.6"

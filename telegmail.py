@@ -1,4 +1,5 @@
 import os
+import re
 import pytz
 import asyncio
 import mdmail
@@ -56,6 +57,28 @@ async def messages_by_day(channel, day):
             return result
         result.append(msg)
 
+    return result
+
+
+def format_msg(msg):
+    """Sanitize text and format hashtags"""
+
+    body = ""
+    hashtags = []
+    # split on spaces and newlines
+    for i, word in enumerate(re.split('[ \n]', msg.text)):
+        if word[0] == '#':
+            hashtags.append(word)
+        else:
+            body = re.split('[ \n]', msg.text, i)[i]
+            break
+
+    sanitized_hashtags = [tag.replace("#", "\#") for tag in hashtags]
+    colored_hashtags = [
+        f"<span style=\"color:blue\">{tag}</span>" for tag in sanitized_hashtags]
+
+    return "{}  \n{}".format(' '.join(colored_hashtags), body)
+
 
 def format_msg_group(header, date, msgs):
     """Format a message group into markdown."""
@@ -64,25 +87,21 @@ def format_msg_group(header, date, msgs):
     date_str = date.strftime("%B %d, %Y (%A)")
 
     # format messages and join
-    msg_str = "\n".join([msg.text.replace("#", "\#") + "\n" for msg in msgs])
+    msg_str = "\n".join([format_msg(msg) + "\n" for msg in msgs])
 
     return f"""
-### {header}
-
-#### {date_str}
+### {header} - {date_str}
 
 {msg_str}
 """
 
 
-def format_email(header, snippets):
+def format_email(snippets):
     """Format entire email from markdown snippets"""
 
     snippet_str = "\n".join(snippets)
 
     return f"""
-# {header}
-
 {snippet_str}
 """
 
@@ -111,12 +130,13 @@ async def main():
         "Last Month", last_month, msgs_last_month)
 
     # format full markdown
-    content = format_email("Telegram Messages", [
-                           yesterday_snippet, last_week_snippet, last_month_snippet])
+    content = format_email(
+        [yesterday_snippet, last_week_snippet, last_month_snippet])
 
+    today_str = today.strftime("%B %d, %Y")
+    subject = f"Notes Reminders - {today_str}"
     # send email
-    print("Sending email...")
-    mdmail.send(content, subject="Telegram Messages",
+    mdmail.send(content, subject=subject,
                 from_email=from_email, to_email=to_email, smtp=smtp)
 
 
