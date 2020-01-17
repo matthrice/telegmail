@@ -1,4 +1,6 @@
 .env
-telegmail.session
 .vscode/
 Pipfile.lock
+
+.telegmail.py.swp
+telegmail.session
