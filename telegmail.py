@@ -74,6 +74,7 @@ def format_msg(msg):
             break
 
     sanitized_hashtags = [tag.replace("#", "\#") for tag in hashtags]
+    # TODO make colors randomized
     colored_hashtags = [
         f"<span style=\"color:blue\">{tag}</span>" for tag in sanitized_hashtags]
 
@@ -84,7 +85,7 @@ def format_msg_group(header, date, msgs):
     """Format a message group into markdown."""
 
     # format date
-    date_str = date.strftime("%B %d, %Y (%A)")
+    date_str = date.strftime("%B %d, %Y")
 
     # format messages and join
     msg_str = "\n".join([format_msg(msg) + "\n" for msg in msgs])
@@ -120,7 +121,7 @@ async def main():
         messages_by_day(notes_channel, last_week),
         messages_by_day(notes_channel, last_month)
     )
-
+	
     # format individual markdown snippets
     yesterday_snippet = format_msg_group(
         "Yesterday", yesterday, msgs_yesterday)
