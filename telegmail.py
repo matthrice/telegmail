@@ -3,10 +3,13 @@ import re
 import pytz
 import asyncio
 import mdmail
+import random
 
 from telethon import TelegramClient
 from telethon import functions, types
 from datetime import datetime, date, timedelta
+
+from format_email import format_msg, format_msg_group, format_email_body
 
 # telegram app configuration
 api_id = int(os.getenv("API_ID"))
@@ -60,53 +63,6 @@ async def messages_by_day(channel, day):
     return result
 
 
-def format_msg(msg):
-    """Sanitize text and format hashtags"""
-
-    body = ""
-    hashtags = []
-    # split on spaces and newlines
-    for i, word in enumerate(re.split('[ \n]', msg.text)):
-        if word[0] == '#':
-            hashtags.append(word)
-        else:
-            body = re.split('[ \n]', msg.text, i)[i]
-            break
-
-    sanitized_hashtags = [tag.replace("#", "\#") for tag in hashtags]
-    # TODO make colors randomized
-    colored_hashtags = [
-        f"<span style=\"color:blue\">{tag}</span>" for tag in sanitized_hashtags]
-
-    return "{}  \n{}".format(' '.join(colored_hashtags), body)
-
-
-def format_msg_group(header, date, msgs):
-    """Format a message group into markdown."""
-
-    # format date
-    date_str = date.strftime("%B %d, %Y")
-
-    # format messages and join
-    msg_str = "\n".join([format_msg(msg) + "\n" for msg in msgs])
-
-    return f"""
-### {header} - {date_str}
-
-{msg_str}
-"""
-
-
-def format_email(snippets):
-    """Format entire email from markdown snippets"""
-
-    snippet_str = "\n".join(snippets)
-
-    return f"""
-{snippet_str}
-"""
-
-
 async def main():
     """Get messages from yesterday, last week, and last month, and send an email."""
 
@@ -121,7 +77,7 @@ async def main():
         messages_by_day(notes_channel, last_week),
         messages_by_day(notes_channel, last_month)
     )
-	
+
     # format individual markdown snippets
     yesterday_snippet = format_msg_group(
         "Yesterday", yesterday, msgs_yesterday)
@@ -131,14 +87,14 @@ async def main():
         "Last Month", last_month, msgs_last_month)
 
     # format full markdown
-    content = format_email(
+    content = format_email_body(
         [yesterday_snippet, last_week_snippet, last_month_snippet])
 
     today_str = today.strftime("%B %d, %Y")
     subject = f"Notes Reminders - {today_str}"
     # send email
     mdmail.send(content, subject=subject,
-                from_email=from_email, to_email=to_email, smtp=smtp)
+                from_email="TeleGmail", to_email=to_email, smtp=smtp)
 
 
 with client:
