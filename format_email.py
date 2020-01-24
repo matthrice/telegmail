@@ -11,11 +11,13 @@ def format_msg(msg):
     hashtags = []
     # split on spaces and newlines
     for i, word in enumerate(re.split('[ \n]', msg.text)):
-        if word[0] == '#':
+        if len(word) > 0 and word[0] == '#':
             hashtags.append(word)
         else:
             # get body and replace all newlines with proper markdown newlines
-            body = re.split('[ \n]', msg.text, i)[i].replace("\n", "  \n")
+            # if i != 0, then there are hashtags to remove from body
+            body = re.split('[ \n]', msg.text, i)[i] if i != 0 else msg.text
+            body = body.replace("\n", "  \n")
             break
 
     # ensure markdown doesn't interpret headers
